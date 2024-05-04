@@ -1,0 +1,97 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error, r2_score
+
+def activ_func(x):
+    return x
+
+def activ_func_derivative(x):
+    return 1
+
+X1 = np.array([1, 2, 3])
+X2 = np.array([2, 3, 7])
+Y_true = np.array([3, 5, 10])
+
+w1 = 0.1
+w2 = 0.2
+b = 0.75
+
+lr = 0.000001 
+iterations = 35000 
+
+df1 = pd.DataFrame(columns=['dw1', 'dw2', 'db', 'w1', 'w2', 'b'])
+df2 = pd.DataFrame(columns=['loss','Z', 'Y_pred','dZ','RMSE'])
+
+def single_layer_model(X1, X2, w1, w2, b):
+    Z = w1*X1 + w2*X2 + b
+    Y_pred = activ_func(Z)
+    return Y_pred, Z
+
+for i in range(iterations):
+    Y_pred, Z = single_layer_model(X1, X2, w1, w2, b)
+    loss = (1/6)*np.sum((Y_true - Y_pred)**2)
+    RMSE = np.sqrt(loss*2)
+    
+    dZ = (Y_pred - Y_true) * activ_func_derivative(Z)
+ 
+    dw1 = np.mean(dZ * X1)
+    dw2 = np.mean(dZ * X2)
+    db = np.mean(dZ)
+
+    w1 -= lr * dw1
+    w2 -= lr * dw2
+    b -= lr * db
+
+    df1.loc[i] = [dw1, dw2, db, w1, w2, b]
+    df2.loc[i] = [loss, Z, Y_pred, dZ, RMSE]
+
+init_values = [0, 0, 0, 0.5, -0.5, 0.2]
+df_init = pd.DataFrame([init_values])
+df_init.columns = df1.columns
+
+df1 = pd.concat([df_init, df1]).reset_index(drop=True)
+
+fig, axs = plt.subplots(1, 5, figsize=(15, 5))  
+
+axs[0].plot(range(iterations+1), df1['w1'])
+axs[0].set_title('W1 over iterations')
+axs[0].set_xlabel('Iterations')
+axs[0].set_ylabel('W1')
+
+axs[1].plot(range(iterations+1), df1['w2'])
+axs[1].set_title('W2 over iterations')
+axs[1].set_xlabel('Iterations')
+axs[1].set_ylabel('W2')
+
+axs[2].plot(range(iterations+1), df1['b'])
+axs[2].set_title('bias over iterations')
+axs[2].set_xlabel('Iterations')
+axs[2].set_ylabel('bias')
+
+axs[3].plot(range(iterations), df2['RMSE'])
+axs[3].set_title('RMSE over iterations')
+axs[3].set_xlabel('Iterations')
+axs[3].set_ylabel('RMSE')
+
+Y_pred_final = df2['Y_pred'].tail(1).values[0]
+Y_true=np.array([3, 5, 10])
+axs[4].scatter(Y_true, Y_pred_final)
+axs[4].set_title('Predicted Y vs Observed Y')
+axs[4].set_xlabel('Observed Y')
+axs[4].set_ylabel('Predicted Y')
+
+slope, intercept = np.polyfit(Y_true, Y_pred_final, 1)
+
+x = np.array([min(Y_true), max(Y_true)])
+y = slope * x + intercept
+axs[4].plot(x, y, color='green')
+
+r2 = r2_score(Y_true, Y_pred_final)
+rmse = np.sqrt(mean_squared_error(Y_true, Y_pred_final))
+
+axs[4].text(0.05, 0.75, f'R² = {r2:.2f}\nRMSE = {rmse:.3f}', transform=axs[4].transAxes, verticalalignment='top')
+
+fig.suptitle("Activation function: Identity function\nLearning rate: 0.000001 \nIterations: 35000")
+plt.tight_layout() 
+plt.show()
